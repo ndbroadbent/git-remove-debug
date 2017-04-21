@@ -117,11 +117,6 @@ end
 
 def final_confirm_deletion(lines_to_delete)
   total_lines = total_deleted_lines(lines_to_delete)
-  if total_lines.zero?
-    puts 'Nothing to delete.'
-    exit
-  end
-
   puts "\n\n" if @options[:patch]
   puts '================================================================'
   puts "    Deleting #{total_lines} debugging statements in \
@@ -272,20 +267,24 @@ def find_lines_to_delete_in_git_diff
   lines_to_delete
 end
 
-def find_lines_to_delete
-  if @options[:all]
-    find_lines_to_delete_in_all_files
-  else
-    find_lines_to_delete_in_git_diff
-  end
+
+lines_to_delete = if @options[:all]
+  find_lines_to_delete_in_all_files
+else
+  find_lines_to_delete_in_git_diff
 end
 
-if @options[:confirm] && !@options[:patch]
-  final_confirm_deletion(find_lines_to_delete)
+
+total_lines = total_deleted_lines(lines_to_delete)
+if total_lines.zero?
+  puts 'Nothing to delete.'
   exit
 end
 
-lines_to_delete = find_lines_to_delete
-total_lines = total_deleted_lines(lines_to_delete)
+if @options[:confirm] && !@options[:patch]
+  final_confirm_deletion(lines_to_delete)
+  exit
+end
+
 puts "Deleting #{total_lines} debugging statements in #{lines_to_delete.count} file(s)..."
 delete_all_lines(lines_to_delete)
