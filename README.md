@@ -1,53 +1,59 @@
 ## git-remove-debug
 
-This is a small script that parses the output from `git diff`, and deletes any **new** lines that are "debugging statements". You can also pass a custom regex.
+This is a small script that parses the output from `git diff`, and deletes any **new** or **changed** lines that are "debugging statements". You can also pass a custom regex to match lines.
 
 By default, the script will show all of the lines that it will delete, and it will ask you to confirm. You can skip the confirmation by using the `-f` (or `--force`) option.
 
-It also has an `patch` mode, similar to `git add -p` or `git checkout -p`. You can enable patch mode with the `-p` flag. When running in this mode, the script will ask you to confirm each individual line. You can use `Ctrl+C` to cancel at any time.
+It also has an `patch` mode, similar to `git add -p` or `git checkout -p`. You can enable patch mode with the `-p` flag. When running in this mode, the script will prompt you to confirm each individual line. You can use `q` or `Ctrl+C` to cancel at any time. You can also use `d` to skip the rest of the lines, and only delete what you have already confirmed.
 
-## Disclaimer
+> NOTE: Unlike `git add -p`, you don't have to press return after pressing 'y' or 'n'.
 
-This software is provided without warranty of any kind, and I can not be held responsible for any lost data.
 
-## Automatic Backups
+## Disclaimer and Backups
 
-This script will make a a backup of every file that it touches. The paths will be displayed in the console.
+This software is provided without warranty of any kind. By using this script, you agree and understand that I can not be held responsible for any data loss.
 
-## Debugging Statements
+The script will make a backup copy of any file that it overwrites. The backup path will be displayed in the console.
 
-99% of my debugging statements are just a single line, maybe with some indentation at the beginning. If you have a multi-line `console.log` statement, then you'll have to delete that manually. (But pull requests are welcome!)
+Please note that this script may not work for all encodings and line endings. It probably won't work very well on Windows, and you should be very careful if your filenames contain any spaces or UTF8 characters.
+
+
+## Recognized Debugging Statements
+
+This script removes simple debugger calls and print statements.
+
+99% of my print statements are just a single line. If you have a multi-line print statement, you'll have to delete that manually for now. (Pull requests are welcome!)
+
 
 ### JavaScript
 
-* Filename regex: `/\.jsx?$/`
-* Line regex:
-
-```js
-/^\s*console\.log/
-```
+* Sxtensions: `/\.jsx?$/`
+* Removes:
+  * `console.log`
+  * `debugger`
 
 ### Ruby
 
-* Filename regex: `/\.rb$/`
-* Line regex:
-
-```js
-/^\s*puts ['"]/
-```
+* Extensions: `/\.rb$/`
+* Removes:
+  * `puts`
+  * `print`
+  * `debugger`
+  * `require 'byebug'`    *(Ruby >= 2.0)*
+  * `require 'debugger'`  *(Ruby <= 1.9)*
 
 ### Python
 
-* Filename regex: `/\.py$/`
-* Line regex:
-
-```js
-/^\s*print ['"]/
-```
+* Extensions: `/\.py$/`
+* Removes:
+  * `print`
+  * `import pdb`
+  * `pdb.set_trace`
 
 ### Others
 
-Pull requests welcome!
+Pull requests are welcome!
+
 
 ## Usage
 
@@ -90,6 +96,7 @@ $ git-remove-debug -r "^\s*testing"  # (or --regex)
 $ git-remove-debug -l ruby  # (or --lang)
 ```
 
+
 ## Default extensions
 
 The script has built-in support for some common Ruby files that don't have extensions:
@@ -100,9 +107,10 @@ Rakefile
 Guardfile
 ```
 
+
 ## Requirements
 
-At least Ruby 2.0.0.
+At least Ruby 2.0.0
 
 
 ## Installation
