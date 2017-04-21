@@ -1,0 +1,62 @@
+#!/usr/bin/env ruby
+
+REGEXES = [
+  { lang: 'Ruby',       filename: /\.rb$/,   line: /^\s*puts ['"]/ },
+  { lang: 'JavaScript', filename: /\.jsx?$/, line: /^\s*console\.log/ },
+  { lang: 'Python',     filename: /\.py$/,   line: /^\s*print ['"]/ }
+].freeze
+
+
+diff = `git diff --unified=0`.split("\n")
+
+filename = nil
+line_regex = nil
+file_lang = nil
+line_number = nil
+match = nil
+
+diff.each do |line|
+  match = line.match(/^diff --git a\/(?<filename>[^\s]+)\sb[^\s]+$/)
+  if match
+    filename = match[:filename]
+    line_number = nil
+    puts "found filename: #{filename}"
+
+    file_lang = nil
+    line_regex = nil
+    REGEXES.each do |regex|
+      next unless filename[regex[:filename]]
+      line_regex = regex[:line]
+      file_lang = regex[:lang]
+      puts "found regex for filename with language: #{file_lang}"
+      break
+    end
+    next
+  end
+
+  # Just skip this whole file if we don't have any regex for it
+  next if line_regex.nil?
+
+  # Find the line number
+  match = line.match(/^@@ -(?<a_line>\d+)(,(\d+))* \+(?<b_line>\d+)(,(\d+))* @@/)
+  if match
+    line_number = match[:b_line].to_i
+    puts "found line number: #{line_number}"
+    next
+  end
+
+  # Keep going until we find a line number.
+  next if line_number.nil?
+
+  # Then, skip all the deleted lines.
+  next unless line[/^\+/]
+
+  puts "Found added line at: #{line_number}"
+
+  if line[line_regex]
+    puts "Found one "
+  end
+
+  # Increment the line number for the next run.
+  line_number += 1
+end

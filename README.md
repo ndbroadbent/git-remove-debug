@@ -11,7 +11,7 @@ It also has an "interactive" mode, similar to `git add -p` or `git checkout -p`.
 ### JavaScript
 
 * Filename regex: `/\.jsx?$/`
-* Debugging statement regex:
+* Line regex:
 
 ```js
 /^\s*console\.log/
@@ -20,7 +20,7 @@ It also has an "interactive" mode, similar to `git add -p` or `git checkout -p`.
 ### Ruby
 
 * Filename regex: `/\.rb$/`
-* Debugging statement regex:
+* Line regex:
 
 ```js
 /^\s*puts ['"]/
@@ -29,7 +29,7 @@ It also has an "interactive" mode, similar to `git add -p` or `git checkout -p`.
 ### Python
 
 * Filename regex: `/\.py$/`
-* Debugging statement regex:
+* Line regex:
 
 ```js
 /^\s*print ['"]/
