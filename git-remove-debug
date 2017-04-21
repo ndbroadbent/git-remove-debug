@@ -1,148 +1,17 @@
 #!/usr/bin/env ruby
 require 'set'
-require 'optparse'
 require 'io/console'
 require 'tmpdir'
 
+require_relative 'lib/options'
+require_relative 'lib/matchers'
+require_relative 'lib/git_diff_regexes'
+require_relative 'lib/lang_filenames'
+require_relative 'lib/string_colors'
 
-# Helpers for string colorization
-class String
-  def colorize(color_code)
-    "\e[1;#{color_code}m#{self}\e[0m"
-  end
+@options = Options.parse!
 
-  def red
-    colorize(31)
-  end
-
-  def green
-    colorize(32)
-  end
-
-  def yellow
-    colorize(33)
-  end
-
-  def blue
-    colorize(34)
-  end
-end
-
-
-FILENAME_REGEX = %r{^diff --git a\/(?<filename>[^\s]+)\sb[^\s]+$}
-LINE_NUMBER_REGEX = /^@@ -(?<a_line>\d+)(,(\d+))* \+(?<b_line>\d+)(,(\d+))* @@/
-ADDED_LINE_REGEX = /^\+/
-REMOVED_LINE_REGEX = /^-/
-
-MATCHERS = {
-  /\.rb$/ => {
-    lang: 'Ruby',
-    matchers: [
-      {
-        name: "require 'byebug'",
-        regex: /^require ['"]byebug['"]/
-      },
-      {
-        name: "require 'debugger'",
-        regex: /^require ['"]debugger['"]/
-      },
-      {
-        name: 'debugger',
-        regex: /^\s*debugger/
-      },
-      {
-        name: 'puts',
-        regex: /^\s*puts/
-      },
-      {
-        name: 'print',
-        regex: /^\s*print/
-      }
-    ]
-  },
-  /\.jsx?$/ => {
-    lang: 'JavaScript',
-    matchers: [
-      {
-        name: 'debugger',
-        regex: /^\s*debugger/
-      },
-      {
-        name: 'console.log',
-        regex: /^\s*console\.log/
-      }
-    ]
-  },
-  /\.py$/ => {
-    lang: 'Python',
-    matchers: [
-      {
-        name: 'print',
-        regex: /^\s*print\s+['"]/
-      },
-      {
-        name: 'import pdb',
-        regex: /^import pdb/
-      },
-      {
-        name: 'pdb.set_trace',
-        regex: /^\s*pdb\.set_trace/
-      },
-    ]
-  }
-}.freeze
-
-FILENAME_LANGS = {
-  'git-remove-debug' => 'Ruby',
-  'Gemfile'   => 'Ruby',
-  'Rakefile'  => 'Ruby',
-  'Guardfile' => 'Ruby',
-}.freeze
-
-@options = {
-  regex: nil,
-  lang: nil,
-  patch: false,
-  all: false,
-  confirm: true,
-}
-
-OptionParser.new do |opts|
-  opts.banner = 'Usage: git-remove-debug [options] [files]'
-
-  opts.on '-r REGEX',
-          '--regex=REGEX',
-          'Use a custom regex for changed lines' do |r|
-    @options[:regex] = r
-  end
-  opts.on '-l LANGUAGE',
-          '--lang=LANGUAGE',
-          'Use the regex for the given language' do |l|
-    @options[:lang] = l
-  end
-  opts.on '-p',
-          '--patch',
-          'Asks you to confirm the deletion of each matching line' do |p|
-    @options[:patch] = true
-  end
-  opts.on '-a',
-          '--all',
-          'Scans all files that are checked in to the git repository' do |p|
-    @options[:all] = true
-  end
-  opts.on '-f',
-          '--force',
-          'Does not prompt before deleting lines' do |p|
-    @options[:confirm] = false
-  end
-
-  opts.on_tail('-h', '--help', 'Show this message') do
-    puts opts
-    exit
-  end
-end.parse!
-
-def get_char
+def prompt_for_char
   char = STDIN.getch
   if char == "\u0003"
     puts '^C'
@@ -186,15 +55,6 @@ def matchers_for_options
   find_matchers_for_regex_option || find_matchers_for_lang_option
 end
 
-
-@filename = nil
-@line_number = nil
-@matchers = matchers_for_options
-@has_default_matchers = !@matchers.nil?
-
-@lines_to_delete = {}
-
-
 # Find the regex for the given file
 def find_matchers_for_filename(filename)
   MATCHERS.each do |file_regex, matchers|
@@ -202,28 +62,22 @@ def find_matchers_for_filename(filename)
     return matchers
   end
 
-  lang = FILENAME_LANGS[filename]
+  lang = LANG_FILENAMES[filename]
   return if lang.nil?
   find_matchers_for_lang(lang)
 end
 
-def find_filename_and_matchers_from_diff(line)
+def find_filename_from_diff(line)
   match = line.match(FILENAME_REGEX)
   return false unless match
-
-  @filename = match[:filename]
-  @line_number = nil
-
-  @matchers = find_matchers_for_filename(@filename) unless @has_default_matchers
-  true
+  match[:filename]
 end
 
 def find_line_number_from_diff(line)
   # Find the line number
   match = line.match(LINE_NUMBER_REGEX)
   return false unless match
-  @line_number = match[:b_line].to_i
-  true
+  match[:b_line].to_i
 end
 
 def print_deleted_line(filename, line_number, line)
@@ -232,23 +86,15 @@ def print_deleted_line(filename, line_number, line)
   puts
 end
 
-def stage_line_for_deletion(line)
-  @lines_to_delete[@filename] ||= []
-  @lines_to_delete[@filename] << {
-    number: @line_number,
-    line: line
-  }
-end
-
-def delete_all_matches
+def delete_all_lines(lines_to_delete)
   # Create a temp directory for backup files
   Dir::Tmpname.create('git-remove-debug') do |temp_dir|
-    @lines_to_delete.each do |filename, deleted_lines|
+    lines_to_delete.each do |filename, deleted_lines|
       temp_path = File.join(temp_dir, filename)
-      FileUtils::mkdir_p File.dirname(temp_path)
+      FileUtils.mkdir_p File.dirname(temp_path)
       FileUtils.cp(filename, temp_path)
 
-      puts "Backed up #{filename} to: #{temp_path}"
+      puts "Backed up original #{filename} to: #{temp_path}"
 
       # Rewrite the file without deleted lines.
       deleted_line_numbers = Set.new(deleted_lines.map { |line| line[:number] })
@@ -263,51 +109,50 @@ def delete_all_matches
   end
 end
 
-def total_deleted_lines
-  total_lines = @lines_to_delete.keys.reduce(0) do |s, key|
-    s + @lines_to_delete[key].count
+def total_deleted_lines(lines_to_delete)
+  lines_to_delete.keys.reduce(0) do |s, key|
+    s + lines_to_delete[key].count
   end
 end
 
-# I think we should always confirm again, even in patch mode.
-def confirm_deletion
-  total_lines = total_deleted_lines
+def final_confirm_deletion(lines_to_delete)
+  total_lines = total_deleted_lines(lines_to_delete)
   if total_lines.zero?
     puts 'Nothing to delete.'
     exit
   end
 
-  puts "\n\n"
+  puts "\n\n" if @options[:patch]
   puts '================================================================'
-  puts "    Ready to delete #{total_lines} debugging statements in #{@lines_to_delete.count} file(s):"
+  puts "    Deleting #{total_lines} debugging statements in \
+#{lines_to_delete.count} file(s):"
   puts "================================================================\n\n"
 
-  @lines_to_delete.each do |filename, lines|
+  lines_to_delete.each do |filename, lines|
     lines.each do |line_data|
       print_deleted_line(filename, line_data[:number], line_data[:line])
     end
   end
 
   print 'Delete all lines? [y,n]? '.blue
-  if get_char == 'y'
-    delete_all_matches
+  if prompt_for_char == 'y'
+    delete_all_lines(lines_to_delete)
     return
   end
 
   puts 'Aborted.'
 end
 
-def confirm_line_deletion(line)
+def prompt_for_line_action(line)
   print 'Delete this line [y,n,d,q]? '.blue
-  char = get_char
+  char = prompt_for_char
 
   case char.downcase
   when 'y'
-    stage_line_for_deletion(line)
+    :delete_line
   when 'q' then exit
   when 'd'
-    confirm_deletion
-    exit
+    :skip_to_end
   when 'n'
     puts "Skipping #{@filename}:#{@line_number}"
   else
@@ -316,19 +161,15 @@ def confirm_line_deletion(line)
   end
 end
 
-def run_patch_prompt(line)
-  print_deleted_line(@filename, @line_number, line)
-  confirm_line_deletion(line)
+def run_patch_prompt(filename, line_number, line)
+  print_deleted_line(filename, line_number, line)
+  prompt_for_line_action(line)
 end
 
-def find_matching_line(line)
-  return unless @matchers[:matchers].find { |m| m[:regex] =~ line }
-
-  if @options[:patch]
-    run_patch_prompt(line)
-  else
-    stage_line_for_deletion(line)
-  end
+def action_for_line(filename, line_number, line, matchers)
+  return nil unless matchers[:matchers].find { |m| m[:regex] =~ line }
+  return run_patch_prompt(filename, line_number, line) if @options[:patch]
+  :delete_line
 end
 
 def text_file?(filename)
@@ -337,64 +178,114 @@ def text_file?(filename)
   !(%r{text\/plain} =~ mime_type).nil?
 end
 
-def process_all_files
+def find_lines_to_delete_in_all_files
   args = ARGV.join(' ')
   git_ls_files = `git ls-files #{args}`.split("\n")
 
-  git_ls_files.each do |filename|
-    @filename = filename
+  matchers = matchers_for_options
+  override_matchers = !matchers.nil?
 
+  lines_to_delete = {}
+
+  git_ls_files.each do |filename|
     # Only parse text files
     next unless text_file?(filename)
 
-    unless @has_default_matchers
-      @matchers = find_matchers_for_filename(filename)
-    end
+    matchers = find_matchers_for_filename(filename) unless override_matchers
 
     # Skip this file if we don't know what to look for
-    next if @matchers.nil?
+    next if matchers.nil?
 
     File.read(filename).lines.each_with_index do |line, i|
-      @line_number = i
-      find_matching_line(line)
+      line_number = i + 1
+
+      action = action_for_line(filename, line_number, line, matchers)
+
+      case action
+      when :skip_to_end
+        return lines_to_delete
+      when :delete_line
+        lines_to_delete[filename] ||= []
+        lines_to_delete[filename] << {
+          number: line_number,
+          line: line
+        }
+      end
     end
   end
+  lines_to_delete
 end
 
-def process_git_diff
+def find_lines_to_delete_in_git_diff
   args = ARGV.join(' ')
   git_diff = `git diff --unified=0 #{args}`.split("\n")
 
+  filename = nil
+  line_number = nil
+
+  matchers = matchers_for_options
+  override_matchers = !matchers.nil?
+
+  lines_to_delete = {}
+
   git_diff.each do |line|
-    next if find_filename_and_matchers_from_diff(line)
+    next_filename = find_filename_from_diff(line)
+    if next_filename
+      filename = next_filename
+      matchers = find_matchers_for_filename(filename) unless override_matchers
+      line_number = nil
+      next
+    end
 
-    # Just skip this whole file if we don't have any regex for it
-    next if @matchers.nil?
+    # Skip the whole file when we don't have any matchers
+    next if matchers.nil?
 
-    next if find_line_number_from_diff(line)
+    next_line_number = find_line_number_from_diff(line)
+    if next_line_number
+      line_number = next_line_number
+      next
+    end
 
     # Keep going until the line number has been set.
-    next if @line_number.nil?
+    next if line_number.nil?
 
     next unless ADDED_LINE_REGEX =~ line
     stripped_line = line.sub(ADDED_LINE_REGEX, '')
-    find_matching_line(stripped_line)
 
-    # Increment the line number for the next run.
-    @line_number += 1 unless REMOVED_LINE_REGEX =~ line
+    action = action_for_line(filename, line_number, stripped_line, matchers)
+
+    case action
+    when :skip_to_end
+      return lines_to_delete
+    when :delete_line
+      lines_to_delete[filename] ||= []
+      lines_to_delete[filename] << {
+        number: line_number,
+        line: stripped_line
+      }
+    end
+
+    # Increment the line number for the next loop.
+    line_number += 1
+  end
+
+  lines_to_delete
+end
+
+def find_lines_to_delete
+  if @options[:all]
+    find_lines_to_delete_in_all_files
+  else
+    find_lines_to_delete_in_git_diff
   end
 end
 
-if @options[:all]
-  process_all_files
-else
-  process_git_diff
+if @options[:confirm] && !@options[:patch]
+  final_confirm_deletion(find_lines_to_delete)
+  exit
 end
 
-
-if @options[:confirm]
-  confirm_deletion
-else
-  puts "Deleting #{total_deleted_lines} debugging statements in #{@lines_to_delete.count} file(s)..."
-  delete_all_matches
-end
+lines_to_delete = find_lines_to_delete
+total_lines = total_deleted_lines(lines_to_delete)
+puts "Deleting #{total_lines} debugging statements in #{lines_to_delete.count} file(s)..."
+delete_all_lines(lines_to_delete)
