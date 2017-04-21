@@ -31,6 +31,7 @@ end
 
 FILENAME_REGEX = %r{^diff --git a\/(?<filename>[^\s]+)\sb[^\s]+$}
 LINE_NUMBER_REGEX = /^@@ -(?<a_line>\d+)(,(\d+))* \+(?<b_line>\d+)(,(\d+))* @@/
+ADDED_LINE_REGEX = /^\+/
 REMOVED_LINE_REGEX = /^-/
 
 MATCHERS = {
@@ -39,23 +40,23 @@ MATCHERS = {
     matchers: [
       {
         name: "require 'byebug'",
-        regex: /^\+require ['"]byebug['"]/
+        regex: /^require ['"]byebug['"]/
       },
       {
         name: "require 'debugger'",
-        regex: /^\+require ['"]debugger['"]/
+        regex: /^require ['"]debugger['"]/
       },
       {
         name: 'debugger',
-        regex: /^\+\s*debugger/
+        regex: /^\s*debugger/
       },
       {
         name: 'puts',
-        regex: /^\+\s*puts/
+        regex: /^\s*puts/
       },
       {
         name: 'print',
-        regex: /^\+\s*print/
+        regex: /^\s*print/
       }
     ]
   },
@@ -64,11 +65,11 @@ MATCHERS = {
     matchers: [
       {
         name: 'debugger',
-        regex: /^\+\s*debugger/
+        regex: /^\s*debugger/
       },
       {
         name: 'console.log',
-        regex: /^\+\s*console\.log/
+        regex: /^\s*console\.log/
       }
     ]
   },
@@ -77,21 +78,22 @@ MATCHERS = {
     matchers: [
       {
         name: 'print',
-        regex: /^\+\s*print\s+['"]/
+        regex: /^\s*print\s+['"]/
       },
       {
         name: 'import pdb',
-        regex: /^\+import pdb/
+        regex: /^import pdb/
       },
       {
         name: 'pdb.set_trace',
-        regex: /^\+\s*pdb\.set_trace/
+        regex: /^\s*pdb\.set_trace/
       },
     ]
   }
 }.freeze
 
 FILENAME_LANGS = {
+  'git-remove-debug' => 'Ruby',
   'Gemfile'   => 'Ruby',
   'Rakefile'  => 'Ruby',
   'Guardfile' => 'Ruby',
@@ -101,6 +103,7 @@ FILENAME_LANGS = {
   regex: nil,
   lang: nil,
   patch: false,
+  all: false,
   confirm: true,
 }
 
@@ -121,6 +124,11 @@ OptionParser.new do |opts|
           '--patch',
           'Asks you to confirm the deletion of each matching line' do |p|
     @options[:patch] = true
+  end
+  opts.on '-a',
+          '--all',
+          'Scans all files that are checked in to the git repository' do |p|
+    @options[:all] = true
   end
   opts.on '-f',
           '--force',
@@ -190,7 +198,7 @@ end
 # Find the regex for the given file
 def find_matchers_for_filename(filename)
   MATCHERS.each do |file_regex, matchers|
-    next unless @filename[file_regex]
+    next unless filename[file_regex]
     return matchers
   end
 
@@ -199,20 +207,18 @@ def find_matchers_for_filename(filename)
   find_matchers_for_lang(lang)
 end
 
-def find_filename_and_matchers(line)
+def find_filename_and_matchers_from_diff(line)
   match = line.match(FILENAME_REGEX)
   return false unless match
 
   @filename = match[:filename]
   @line_number = nil
 
-
   @matchers = find_matchers_for_filename(@filename) unless @has_default_matchers
-
   true
 end
 
-def find_line_number(line)
+def find_line_number_from_diff(line)
   # Find the line number
   match = line.match(LINE_NUMBER_REGEX)
   return false unless match
@@ -221,9 +227,8 @@ def find_line_number(line)
 end
 
 def print_deleted_line(filename, line_number, line)
-  puts
   puts "#{filename}:#{line_number}".yellow
-  puts line.green
+  puts "+#{line}".green
   puts
 end
 
@@ -275,7 +280,7 @@ def confirm_deletion
   puts "\n\n"
   puts '================================================================'
   puts "    Ready to delete #{total_lines} debugging statements in #{@lines_to_delete.count} file(s):"
-  puts '================================================================'
+  puts "================================================================\n\n"
 
   @lines_to_delete.each do |filename, lines|
     lines.each do |line_data|
@@ -317,9 +322,7 @@ def run_patch_prompt(line)
 end
 
 def find_matching_line(line)
-  return unless @matchers[:matchers].find do |matcher|
-    line[matcher[:regex]]
-  end
+  return unless @matchers[:matchers].find { |m| m[:regex] =~ line }
 
   if @options[:patch]
     run_patch_prompt(line)
@@ -328,26 +331,66 @@ def find_matching_line(line)
   end
 end
 
-
-args = ARGV.join(' ')
-git_diff = `git diff --unified=0 #{args}`.split("\n")
-
-git_diff.each do |line|
-  next if find_filename_and_matchers(line)
-
-  # Just skip this whole file if we don't have any regex for it
-  next if @matchers.nil?
-
-  next if find_line_number(line)
-
-  # Keep going until the line number has been set.
-  next if @line_number.nil?
-
-  find_matching_line(line)
-
-  # Increment the line number for the next run.
-  @line_number += 1 unless line[REMOVED_LINE_REGEX]
+def text_file?(filename)
+  mime_type_flag = /darwin/ =~ RUBY_PLATFORM ? '-I' : '-i'
+  mime_type = `file #{mime_type_flag} #{filename}`
+  !(%r{text\/plain} =~ mime_type).nil?
 end
+
+def process_all_files
+  args = ARGV.join(' ')
+  git_ls_files = `git ls-files #{args}`.split("\n")
+
+  git_ls_files.each do |filename|
+    @filename = filename
+
+    # Only parse text files
+    next unless text_file?(filename)
+
+    unless @has_default_matchers
+      @matchers = find_matchers_for_filename(filename)
+    end
+
+    # Skip this file if we don't know what to look for
+    next if @matchers.nil?
+
+    File.read(filename).lines.each_with_index do |line, i|
+      @line_number = i
+      find_matching_line(line)
+    end
+  end
+end
+
+def process_git_diff
+  args = ARGV.join(' ')
+  git_diff = `git diff --unified=0 #{args}`.split("\n")
+
+  git_diff.each do |line|
+    next if find_filename_and_matchers_from_diff(line)
+
+    # Just skip this whole file if we don't have any regex for it
+    next if @matchers.nil?
+
+    next if find_line_number_from_diff(line)
+
+    # Keep going until the line number has been set.
+    next if @line_number.nil?
+
+    next unless ADDED_LINE_REGEX =~ line
+    stripped_line = line.sub(ADDED_LINE_REGEX, '')
+    find_matching_line(stripped_line)
+
+    # Increment the line number for the next run.
+    @line_number += 1 unless REMOVED_LINE_REGEX =~ line
+  end
+end
+
+if @options[:all]
+  process_all_files
+else
+  process_git_diff
+end
+
 
 if @options[:confirm]
   confirm_deletion

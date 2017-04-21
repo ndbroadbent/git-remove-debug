@@ -4,27 +4,29 @@
 
 -----------------------------------
 
-This is a small script that parses the output from `git diff`, and deletes any **new** or **changed** lines that are "debugging statements". You can also pass a custom regex to match lines.
+This is a small script that parses the output from `git diff`. By default, it deletes any **new** or **changed** lines that are "debugging statements". You can also pass a custom regex to match lines.
 
-By default, the script will show all of the lines that it will delete, and it will ask you to confirm. You can skip the confirmation by using the `-f` (or `--force`) option.
+You can pass the `-a` flag (or `--all`) to remove debugging statements from all files that are checked in to the git repository.
 
-It also has an `patch` mode, similar to `git add -p` or `git checkout -p`. You can enable patch mode with the `-p` flag. When running in this mode, the script will prompt you to confirm each individual line. You can use `q` or `Ctrl+C` to cancel at any time. You can also use `d` to skip the rest of the lines, and only delete what you have already confirmed.
+The script will show you every line that it is about to delete, and will ask you to confirm the changes. You can skip the confirmation by using the `-f` (or `--force`) option.
+
+The script also has an patch mode, similar to `git add -p` or `git checkout -p`. You can use patch mode with the `-p` flag (or `--patch`). When running in patch mode, the script will prompt you to confirm every individual line. You can press `q` or `Ctrl+C` to cancel at any time. You can also press `d` to skip the rest of the lines, and only delete what you have already confirmed.
 
 > NOTE: Unlike `git add -p`, you don't have to press return after pressing 'y' or 'n'.
 
 
 ## Disclaimer and Backups
 
-This software is provided without warranty of any kind. By using this script, you agree and understand that I can not be held responsible for any data loss.
+This software is provided without warranty of any kind. By using this script, you agree and understand that I can not be held personally responsible for any data loss.
 
-The script will make a backup copy of any file that it overwrites. The backup path will be displayed in the console.
+To protect against loss of data, the script will make a backup copy of any file that it touches. The backup path will be displayed in the console.
 
-Please note that this script may not work for all encodings and line endings. It probably won't work very well on Windows, and you should be very careful if your filenames contain any spaces or UTF8 characters.
+Please note that this script may not work for all encodings and line endings. You should also be very careful if your filenames contain any spaces or UTF8 characters.
 
 
 ## Recognized Debugging Statements
 
-This script removes simple debugger calls and print statements.
+This script removes any **new** or **changed** lines that contain debugger calls or print statements.
 
 99% of my print statements are just a single line. If you have a multi-line print statement, you'll have to delete that manually for now. (Pull requests are welcome!)
 
@@ -68,11 +70,17 @@ Usage: git-remove-debug [options] [files]
     -r, --regex=REGEX                Use a custom regex for changed lines
     -l, --lang=LANGUAGE              Use the regex for the given language
     -p, --patch                      Asks you to confirm the deletion of each matching line
+    -a, --all                        Scans all files that are checked in to the git repository
     -f, --force                      Does not prompt before deleting lines
+    -h, --help                       Show this message
 
-# Deletes any new debugging statements from any changed files that are supported.
+# Deletes any debugging statements from any new or changed files.
 # Will show you all changes and will ask you to confirm before deleting.
 $ git-remove-debug
+
+# Scans all files that are checked in to the git repository.
+# You can pass a subdirectory, and it will only scan files in that directory (recursively.)
+$ git-remove-debug -a  # (or --all)
 
 # Delete all debugging statements without confirmation.
 $ git-remove-debug -f  # (or --force)
@@ -114,7 +122,9 @@ Guardfile
 
 ## Requirements
 
-At least Ruby 2.0.0
+Either Mac or Linux, and a version of Ruby >= 2.0.0.
+
+This script does not use any Ruby gems.
 
 
 ## Installation
