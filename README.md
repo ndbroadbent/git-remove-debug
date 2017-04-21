@@ -42,12 +42,15 @@ Pull requests welcome!
 ## Usage
 
 ```bash
-# Automatically deletes all new debugging statements
+# Deletes any new debugging statements from any changed files that are supported
 $ git-remove-debug
 
-# Deletes all new debugging statements from a given file
+# Deletes any new debugging statements from a given file
 $ git-remove-debug <file>
 
-# Asks you if you want to delete each debugging statement
+# Asks you before deleting any debugging statement
 $ git-remove-debug -p
+
+# Delete all *new* lines in all changed files that match a given regex
+$ git-remove-debug -r "^\s*testing"
 ```
