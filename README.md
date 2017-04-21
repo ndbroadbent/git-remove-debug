@@ -2,7 +2,17 @@
 
 This is a small script that parses the output from `git diff`, and deletes any **new** lines that are "debugging statements". You can also pass a custom regex.
 
-It also has an "interactive" mode, similar to `git add -p` or `git checkout -p`. When running in interactive mode, it will ask you whether or not you want to delete each line. It will only delete everything at the end, so you can use ctrl+C to cancel at any time.
+By default, the script will show all of the lines that it will delete, and it will ask you to confirm. You can skip the confirmation by using the `-f` (or `--force`) option.
+
+It also has an `patch` mode, similar to `git add -p` or `git checkout -p`. You can enable patch mode with the `-p` flag. When running in this mode, the script will ask you to confirm each individual line. You can use `Ctrl+C` to cancel at any time.
+
+## Disclaimer
+
+This software is provided without warranty of any kind, and I can not be held responsible for any lost data.
+
+## Automatic Backups
+
+This script will make a a backup of every file that it touches. The paths will be displayed in the console.
 
 ## Debugging Statements
 
@@ -46,25 +56,38 @@ $ git-remove-debug --help
 
 Usage: git-remove-debug [options] [files]
     -r, --regex=REGEX                Use a custom regex for changed lines
-    -l, --language=LANGUAGE          Use the line regex for the given language
-    -p, --interactive                Asks you before deleting any lines
+    -l, --lang=LANGUAGE              Use the regex for the given language
+    -p, --patch                      Asks you to confirm the deletion of each matching line
+    -f, --force                      Does not prompt before deleting lines
 
-# Deletes any new debugging statements from any changed files that are supported
+# Deletes any new debugging statements from any changed files that are supported.
+# Will show you all changes and will ask you to confirm before deleting.
 $ git-remove-debug
+
+# Delete all debugging statements without confirmation.
+$ git-remove-debug -f  # (or --force)
 
 # Deletes any new debugging statements from a given file
 # (All extra arguments are just passed to `git diff`)
 $ git-remove-debug <file>
 
-# Asks you before deleting any new lines
-$ git-remove-debug -p
+# Use "patch" mode. This will ask you to confirm the deletion of each matching line.
+$ git-remove-debug -p  # (or --patch)
+
+# For each line, you will choose one of the following options:
+
+# y - Yes, delete this line
+# n - No, don’t delete this line
+# d - No, don’t delete this line, and all other remaining lines.
+# q - Quit and don't delete anything.
+
 
 # Deletes new lines in changed files, where the line matches the given regex
-$ git-remove-debug -r "^\s*testing"
+$ git-remove-debug -r "^\s*testing"  # (or --regex)
 
 # Use a built-in regex for a given language.
 # (Useful if you want to process files that don't have an extension)
-$ git-remove-debug -l ruby
+$ git-remove-debug -l ruby  # (or --lang)
 ```
 
 ## Default extensions
@@ -76,6 +99,10 @@ Gemfile
 Rakefile
 Guardfile
 ```
+
+## Requirements
+
+At least Ruby 2.0.0.
 
 
 ## Installation
