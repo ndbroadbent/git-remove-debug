@@ -1,5 +1,9 @@
 ## git-remove-debug
 
+![demo-gif](https://cloud.githubusercontent.com/assets/139536/25284863/916d0780-26e2-11e7-8669-c1c1f49b7d5c.gif)
+
+-----------------------------------
+
 This is a small script that parses the output from `git diff`, and deletes any **new** or **changed** lines that are "debugging statements". You can also pass a custom regex to match lines.
 
 By default, the script will show all of the lines that it will delete, and it will ask you to confirm. You can skip the confirmation by using the `-f` (or `--force`) option.
