@@ -1,6 +1,6 @@
 ## git-remove-debug
 
-![demo-gif](https://cloud.githubusercontent.com/assets/139536/25284863/916d0780-26e2-11e7-8669-c1c1f49b7d5c.gif)
+![demo-gif](https://cloud.githubusercontent.com/assets/139536/25290309/b4dddd10-26f7-11e7-9088-ca7bed28c719.gif)
 
 -----------------------------------
 
