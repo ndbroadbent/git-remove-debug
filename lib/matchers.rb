@@ -53,5 +53,18 @@ MATCHERS = {
         regex: /^\s*pdb\.set_trace/
       }
     ]
-  }
+  },
+  /\.php?$/ => {
+    lang: 'PHP',
+    matchers: [
+      {
+        name: 'var_dump',
+        regex: /^\s*var_dump/
+      },
+      {
+        name: 'print_r',
+        regex: /^\s*print_r/
+      }
+    ]
+  },
 }.freeze
