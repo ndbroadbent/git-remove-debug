@@ -72,6 +72,14 @@ $ git-remove-debug -r "^\s*testing"  # (or --regex)
 $ git-remove-debug -l ruby  # (or --lang)
 ```
 
+## How is this different to `eslint --fix`, `rubocop --auto-correct`, etc.?
+
+* Only looks at new or changed lines by default.
+* It's a lot faster, since it just uses `git diff` and some simple regexes.
+* Has an interactive mode, so it's easy to delete specific lines.
+* You can pass a custom regex to quickly delete any matching lines.
+* Backs up any changed files to a temp directory, so you can quickly restore any lost data.
+
 ## Disclaimer and Backups
 
 This software is provided without warranty of any kind. By using this script, you agree and understand that I can not be held personally responsible for any data loss.
