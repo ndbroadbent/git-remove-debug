@@ -39,7 +39,7 @@ Usage: git-remove-debug [options] [files]
     -f, --force                      Does not prompt before deleting lines
     -h, --help                       Show this message
 
-# Deletes any debugging statements from new or changed files.
+# Deletes any debugging statements from new or changed lines.
 # Will display all of the proposed changes, and ask you to confirm before deleting.
 $ git-remove-debug
 
