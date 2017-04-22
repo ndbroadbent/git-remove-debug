@@ -12,15 +12,15 @@ MATCHERS = {
       },
       {
         name: 'debugger',
-        regex: /^\s*debugger[^\w]?/
+        regex: /^\s*debugger/
       },
       {
         name: 'puts',
-        regex: /^\s*puts[^\w]?/
+        regex: /^\s*puts/
       },
       {
         name: 'print',
-        regex: /^\s*print[^\w]?/
+        regex: /^\s*print/
       }
     ]
   },
@@ -29,7 +29,7 @@ MATCHERS = {
     matchers: [
       {
         name: 'debugger',
-        regex: /^\s*debugger[^\w]?/
+        regex: /^\s*debugger/
       },
       {
         name: 'console',
@@ -42,7 +42,7 @@ MATCHERS = {
     matchers: [
       {
         name: 'print',
-        regex: /^\s*print[^\w]?/
+        regex: /^\s*print/
       },
       {
         name: 'import pdb',
