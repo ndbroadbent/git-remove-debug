@@ -123,6 +123,13 @@ By default, this script will remove any **new** or **changed** lines that contai
   * `print`
   * `import pdb`
   * `pdb.set_trace`
+ 
+ ### PHP
+
+* Extension: `/\.php$/`
+* Removes:
+  * `var_dump`
+  * `print_r`
 
 ### Others
 
