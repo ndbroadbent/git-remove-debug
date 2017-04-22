@@ -173,16 +173,13 @@ def text_file?(filename)
   !(%r{text\/plain} =~ mime_type).nil?
 end
 
-def find_lines_to_delete_in_all_files
-  args = ARGV.join(' ')
-  git_ls_files = `git ls-files #{args}`.split("\n")
-
+def find_lines_to_delete_in_files(files)
   matchers = matchers_for_options
   override_matchers = !matchers.nil?
 
   lines_to_delete = {}
 
-  git_ls_files.each do |filename|
+  files.each do |filename|
     # Only parse text files
     next unless text_file?(filename)
 
@@ -209,6 +206,12 @@ def find_lines_to_delete_in_all_files
     end
   end
   lines_to_delete
+end
+
+def find_lines_to_delete_in_git_ls_files
+  args = ARGV.join(' ')
+  git_ls_files = `git ls-files #{args}`.split("\n")
+  find_lines_to_delete_in_files(git_ls_files)
 end
 
 def find_lines_to_delete_in_git_diff
@@ -264,12 +267,14 @@ def find_lines_to_delete_in_git_diff
     line_number += 1
   end
 
-  lines_to_delete
+  # Also look at all untracked files, and merge the results.
+  untracked_files = `git ls-files --others --exclude-standard #{args}`.split("\n")
+  find_lines_to_delete_in_files(untracked_files).merge lines_to_delete
 end
 
 
 lines_to_delete = if @options[:all]
-  find_lines_to_delete_in_all_files
+  find_lines_to_delete_in_git_ls_files
 else
   find_lines_to_delete_in_git_diff
 end
