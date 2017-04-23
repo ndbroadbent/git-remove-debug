@@ -12,7 +12,7 @@ MATCHERS = {
       },
       {
         name: 'debugger',
-        regex: /^\s*debugger/
+        regex: /debugger/
       },
       {
         name: 'puts',
@@ -29,7 +29,7 @@ MATCHERS = {
     matchers: [
       {
         name: 'debugger',
-        regex: /^\s*debugger/
+        regex: /debugger/
       },
       {
         name: 'console',
