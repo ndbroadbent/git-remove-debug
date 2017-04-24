@@ -33,7 +33,7 @@ MATCHERS = {
       },
       {
         name: 'console',
-        regex: /^\s*console\.(log|warn|debug|error)/
+        regex: /^\s*console\.(log|warn|debug|error|info)/
       }
     ]
   },
