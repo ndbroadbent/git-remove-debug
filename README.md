@@ -102,6 +102,7 @@ By default, this script will remove any **new** or **changed** lines that contai
 * Removes:
   * `console.log`
   * `console.debug`
+  * `console.info`
   * `console.warn`
   * `console.error`
   * `debugger`
@@ -123,7 +124,7 @@ By default, this script will remove any **new** or **changed** lines that contai
   * `print`
   * `import pdb`
   * `pdb.set_trace`
- 
+
  ### PHP
 
 * Extension: `/\.php$/`
