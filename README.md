@@ -114,8 +114,10 @@ By default, this script will remove any **new** or **changed** lines that contai
   * `puts`
   * `print`
   * `debugger`
-  * `require 'byebug'`    *(Ruby >= 2.0)*
-  * `require 'debugger'`  *(Ruby <= 1.9)*
+  * `require 'byebug'`
+  * `require 'debugger'`
+  * `require 'pry'`
+  * `binding.pry`
 
 ### Python
 
