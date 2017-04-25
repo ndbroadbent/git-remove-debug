@@ -21,6 +21,14 @@ MATCHERS = {
       {
         name: 'print',
         regex: /^\s*print/
+      },
+      {
+        name: "require 'pry'",
+        regex: /^require ['"]pry['"]/
+      },
+      {
+        name: 'binding.pry',
+        regex: /^\s*binding\.pry/
       }
     ]
   },
