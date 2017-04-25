@@ -91,7 +91,7 @@ Please note that this script may not work for all encodings and line endings. Yo
 
 ## Recognized Debugging Statements
 
-By default, this script will remove any **new** or **changed** lines that contain any of the following debugger calls and print statements. (Use the `-a` or `--all` flag to scan all files in the git repo.)
+By default, this script will remove any **new** or **changed** lines. Use the `-a` or `--all` flag to scan all files in the git repo.
 
 99% of my print statements are just a single line. If you have a multi-line print statement, you'll have to delete that manually for now. (Pull requests are welcome!)
 
@@ -127,7 +127,7 @@ By default, this script will remove any **new** or **changed** lines that contai
   * `import pdb`
   * `pdb.set_trace`
 
- ### PHP
+### PHP
 
 * Extension: `/\.php$/`
 * Removes:
@@ -139,7 +139,7 @@ By default, this script will remove any **new** or **changed** lines that contai
 Pull requests are welcome!
 
 
-## Default languages
+## Default file languages
 
 The script has built-in support for some common files that don't have an extension:
 
@@ -173,7 +173,3 @@ alias grd="~/git-remove-debug/git-remove-debug"
 echo "alias grd=\"~/git-remove-debug/git-remove-debug\"" >> ~/.bashrc
 ```
 
-
----------------------------------------------------
-
-![Debug-ception](debug-ception.png)
