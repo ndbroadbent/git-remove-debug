@@ -6,9 +6,9 @@
 
 ## Summary
 
-You've just fixed a bug in your code. The only problem is that you used a bunch of print statements and debugger calls, so now you have to clean those up. You can use `git checkout -p` to manually work through all the changes, but you have to be careful, and sometimes you can't "split the hunk" to remove a single line.
+You've just fixed a bug in your code. The only problem is that you used a bunch of print statements and debugger calls, so now you have to clean those up. You can use `git checkout -p` to work through all the changes, but you have to be careful, and sometimes you can't remove individual lines.
 
-`git-remove-debug` cleans up your debugging statements with a single command.
+`git-remove-debug` can clean up all of your debugging statements with a single command.
 
 
 ## Full Description and Usage
